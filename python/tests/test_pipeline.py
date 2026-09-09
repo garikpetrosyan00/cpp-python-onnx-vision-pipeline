@@ -224,3 +224,179 @@ def test_media_error_cli(tmp_path: Path, capsys) -> None:
     error = capsys.readouterr().err
     assert "Cannot read image" in error
     assert "Traceback" not in error
+
+
+def test_detector_session_once_and_annotated_video(
+    video_path: Path, model_path: Path, tmp_path: Path, mocked_session
+) -> None:
+    session, constructor = mocked_session
+    raw = session.run.return_value[0]
+    raw[0, 0, :5] = (10, 10, 2, 2, 1)
+    raw[0, 0, 5] = 0.75
+    output = tmp_path / "detected.avi"
+    config = PipelineConfig(parse_source(str(video_path)), output, True, 3, model=model_path)
+    assert run_pipeline(config) == 3
+    constructor.assert_called_once()
+    assert session.run.call_count == 3
+    with InputSource(parse_source(str(output))) as source:
+        frames = list(source)
+    assert len(frames) == 3
+    assert np.any(frames[0] > 10)  # Original first frame was black; annotations were saved.
+
+
+def test_no_detections_saves_unchanged_image(
+    image_path: Path, model_path: Path, tmp_path: Path, mocked_session
+) -> None:
+    output = tmp_path / "no_detections.png"
+    assert (
+        main(
+            [
+                "--source",
+                str(image_path),
+                "--model",
+                str(model_path),
+                "--no-display",
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    np.testing.assert_array_equal(cv2.imread(str(output)), cv2.imread(str(image_path)))
+
+
+def test_corrupt_model_fails_before_media(model_path: Path, monkeypatch, capsys) -> None:
+    forbidden = MagicMock(side_effect=AssertionError("Media opened too early"))
+    monkeypatch.setattr("vision_pipeline.pipeline.InputSource", forbidden)
+    assert main(["--source", "0", "--model", str(model_path), "--no-display"]) == 1
+    forbidden.assert_not_called()
+    message = capsys.readouterr().err
+    assert "checksum/size mismatch" in message and "CPUExecutionProvider" in message
+    assert "Traceback" not in message
+
+
+def test_missing_model_config_error_before_media(tmp_path: Path, monkeypatch, capsys) -> None:
+    forbidden = MagicMock(side_effect=AssertionError("Media opened too early"))
+    monkeypatch.setattr("vision_pipeline.pipeline.InputSource", forbidden)
+    with pytest.raises(SystemExit) as error:
+        main(["--source", "0", "--model", str(tmp_path / "missing.onnx")])
+    assert error.value.code == 2
+    forbidden.assert_not_called()
+    assert "--model" in capsys.readouterr().err
+
+
+def test_metadata_error_before_media(model_path: Path, mocked_session, monkeypatch, capsys) -> None:
+    session, _ = mocked_session
+    session.get_outputs.return_value[0].shape = [1, 8400, 84]
+    forbidden = MagicMock(side_effect=AssertionError("Media opened too early"))
+    monkeypatch.setattr("vision_pipeline.pipeline.InputSource", forbidden)
+    assert main(["--source", "0", "--model", str(model_path), "--no-display"]) == 1
+    forbidden.assert_not_called()
+    assert "8400" in capsys.readouterr().err
+
+
+def test_inference_interrupt_finalizes_completed_frames(
+    video_path: Path, model_path: Path, tmp_path: Path, mocked_session, capsys
+) -> None:
+    session, _ = mocked_session
+    session.run.side_effect = [session.run.return_value, KeyboardInterrupt()]
+    output = tmp_path / "interrupt.avi"
+    assert (
+        main(
+            [
+                "--source",
+                str(video_path),
+                "--model",
+                str(model_path),
+                "--no-display",
+                "--output",
+                str(output),
+            ]
+        )
+        == 130
+    )
+    with InputSource(parse_source(str(output))) as source:
+        assert len(list(source)) == 1
+    assert "Interrupted" in capsys.readouterr().err
+
+
+def test_threshold_flags_control_detection(
+    image_path: Path, model_path: Path, tmp_path: Path, mocked_session
+) -> None:
+    session, _ = mocked_session
+    raw = session.run.return_value[0]
+    raw[0, 0, :5] = (10, 10, 2, 2, 1)
+    raw[0, 0, 5] = 0.5
+    output = tmp_path / "threshold.png"
+    arguments = [
+        "--source",
+        str(image_path),
+        "--model",
+        str(model_path),
+        "--output",
+        str(output),
+        "--no-display",
+    ]
+    assert main([*arguments, "--confidence", "0.5", "--iou", "1"]) == 0
+    assert np.any(cv2.imread(str(output)) != cv2.imread(str(image_path)))
+    assert main([*arguments, "--confidence", "0.6", "--iou", "0"]) == 0
+    np.testing.assert_array_equal(cv2.imread(str(output)), cv2.imread(str(image_path)))
+
+
+def test_iou_flag_controls_same_class_suppression(
+    image_path: Path, model_path: Path, mocked_session, monkeypatch
+) -> None:
+    session, _ = mocked_session
+    raw = session.run.return_value[0]
+    raw[0, 0, :5] = (10, 10, 2, 2, 1)
+    raw[0, 1, :5] = (9, 10, 2, 2, 1)  # Same decoded box at the next grid column.
+    raw[0, :2, 5] = 0.75
+    counts = []
+
+    def capture_detections(frame, detections):
+        counts.append(len(detections))
+        return frame
+
+    monkeypatch.setattr("vision_pipeline.render.annotate", capture_detections)
+    for threshold in ("0.45", "1"):
+        assert (
+            main(
+                [
+                    "--model",
+                    str(model_path),
+                    "--source",
+                    str(image_path),
+                    "--no-display",
+                    "--iou",
+                    threshold,
+                ]
+            )
+            == 0
+        )
+    assert counts == [1, 2]
+
+
+def test_inference_failure_preserves_existing_output(
+    video_path: Path, model_path: Path, tmp_path: Path, mocked_session, capsys
+) -> None:
+    session, _ = mocked_session
+    session.run.side_effect = [session.run.return_value, RuntimeError("inference failed")]
+    output = tmp_path / "existing.avi"
+    output.write_bytes(b"existing output")
+    assert (
+        main(
+            [
+                "--source",
+                str(video_path),
+                "--model",
+                str(model_path),
+                "--no-display",
+                "--output",
+                str(output),
+            ]
+        )
+        == 1
+    )
+    assert output.read_bytes() == b"existing output"
+    assert not list(tmp_path.glob(".existing-*"))
+    assert "inference failed" in capsys.readouterr().err

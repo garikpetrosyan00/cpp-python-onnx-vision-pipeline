@@ -16,6 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+model-tools = ["onnx>=1.16,<2"]
 dev = [
   "pytest>=8,<9",
   "ruff>=0.12,<1",
@@ -30,6 +31,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
+markers = ["real_model: requires the locally downloaded, verified YOLOX-Nano artifact"]
 
 [tool.ruff]
 line-length = 100

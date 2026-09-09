@@ -28,3 +28,34 @@ def video_path(tmp_path: Path) -> Path:
     finally:
         writer.release()
     return path
+
+
+@pytest.fixture
+def model_path(tmp_path: Path) -> Path:
+    """Readable placeholder only; focused session tests explicitly mock verification."""
+    path = tmp_path / "mock.onnx"
+    path.write_bytes(b"mock session fixture")
+    return path
+
+
+@pytest.fixture
+def mocked_session(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+
+    from vision_pipeline import inference
+    from vision_pipeline.model_contract import INPUT_SHAPE, OUTPUT_SHAPE, PROVIDER
+
+    session = MagicMock()
+    session.get_inputs.return_value = [
+        SimpleNamespace(name="actual_input", shape=list(INPUT_SHAPE), type="tensor(float)")
+    ]
+    session.get_outputs.return_value = [
+        SimpleNamespace(name="actual_output", shape=list(OUTPUT_SHAPE), type="tensor(float)")
+    ]
+    session.get_providers.return_value = [PROVIDER]
+    session.run.return_value = [np.zeros(OUTPUT_SHAPE, dtype=np.float32)]
+    constructor = MagicMock(return_value=session)
+    monkeypatch.setattr(inference.ort, "InferenceSession", constructor)
+    monkeypatch.setattr(inference, "verify_model_file", lambda path: None)
+    return session, constructor

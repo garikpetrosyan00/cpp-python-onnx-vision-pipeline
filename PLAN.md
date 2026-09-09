@@ -202,7 +202,7 @@ Files: `python/src/vision_pipeline/preprocess.py` and `python/tests/test_preproc
 
 Verification: `python/.venv/bin/pytest python/tests/test_preprocess.py`.
 
-Acceptance: deterministic tests cover letterbox scale/padding, BGR-to-RGB conversion, float32 normalization, HWC-to-CHW, batch dimension, and coordinate metadata.
+Acceptance: deterministic tests cover top-left letterbox scale/padding (value 114), unchanged BGR channel order and 0..255 values, float32 conversion without normalization, HWC-to-CHW, batch dimension, and coordinate metadata. Phase 2 artifact/upstream audit corrected the earlier RGB/normalization assumption; see `docs/MODEL.md`.
 
 ### 2.3 Session and postprocessing
 

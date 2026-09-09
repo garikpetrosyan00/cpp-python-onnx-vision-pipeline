@@ -1,8 +1,9 @@
-"""Display unchanged frames and publish validated media output on clean exit."""
+"""Annotate detections, display frames, and publish verified media on clean exit."""
 
 import os
 import sys
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
 from types import TracebackType
 from typing import Self
@@ -11,6 +12,57 @@ import cv2
 
 from vision_pipeline.config import OUTPUT_CODECS, PipelineConfig, SourceKind
 from vision_pipeline.input_source import Frame, MediaError
+from vision_pipeline.postprocess import Detection
+
+
+def class_color(class_id: int) -> tuple[int, int, int]:
+    """Stable BGR colors independent of process hash/random state."""
+    return tuple(
+        64 + (class_id * multiplier + offset) % 192
+        for multiplier, offset in ((37, 29), (67, 83), (97, 137))
+    )
+
+
+def annotate(frame: Frame, detections: Sequence[Detection]) -> Frame:
+    """Draw on a copy when needed; retain ownership of the untouched input frame."""
+    if not detections:
+        return frame
+    canvas = frame.copy()
+    height, width = canvas.shape[:2]
+    try:
+        for detection in detections:
+            x1 = max(0, min(width - 1, int(detection.x1)))
+            y1 = max(0, min(height - 1, int(detection.y1)))
+            x2 = max(0, min(width - 1, int(detection.x2)))
+            y2 = max(0, min(height - 1, int(detection.y2)))
+            color = class_color(detection.class_id)
+            cv2.rectangle(canvas, (x1, y1), (x2, y2), color, 2)
+            text = f"{detection.label} {detection.confidence:.2f}"
+            (text_width, text_height), baseline = cv2.getTextSize(
+                text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
+            )
+            text_x = max(0, min(x1, width - text_width - 4))
+            text_y = min(height - 1, y1 - 5 if y1 > text_height + 5 else y1 + text_height + 2)
+            cv2.rectangle(
+                canvas,
+                (text_x, max(0, text_y - text_height - 2)),
+                (min(width - 1, text_x + text_width + 3), min(height - 1, text_y + baseline)),
+                color,
+                -1,
+            )
+            cv2.putText(
+                canvas,
+                text,
+                (text_x, max(0, text_y)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 0, 0),
+                1,
+                cv2.LINE_AA,
+            )
+    except cv2.error as exc:
+        raise MediaError(f"Cannot draw detections: {exc}") from exc
+    return canvas
 
 
 class Renderer:
@@ -34,8 +86,9 @@ class Renderer:
             raise MediaError("No display session found. Run with --no-display for headless use.")
         return self
 
-    def render(self, frame: Frame) -> bool:
-        """Save/display one original frame; return False when Q or ESC is pressed."""
+    def render(self, frame: Frame, detections: Sequence[Detection] = ()) -> bool:
+        """Save/display annotated frames; return False when Q or ESC is pressed."""
+        frame = annotate(frame, detections)
         if self.config.output is not None:
             self._save(frame)
         if self.config.no_display:

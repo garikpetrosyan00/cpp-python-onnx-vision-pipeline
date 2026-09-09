@@ -18,6 +18,7 @@ third_party/
 models/*.onnx
 models/*.ort
 models/*.bin
+models/.*.onnx-*.tmp
 
 # Generated outputs and benchmark runs
 outputs/

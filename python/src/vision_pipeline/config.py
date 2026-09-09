@@ -2,9 +2,13 @@
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+
+from vision_pipeline.model_contract import CLASS_COUNT, model_context
+
+DEFAULT_LABELS = Path(__file__).resolve().parents[3] / "models" / "classes.txt"
 
 IMAGE_EXTENSIONS = frozenset(
     {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp", ".ppm", ".pgm", ".pbm"}
@@ -80,6 +84,36 @@ def positive_integer(value: str) -> int:
     return int(value)
 
 
+def validate_readable_file(path: Path, option: str) -> None:
+    try:
+        if not path.is_file():
+            raise ValueError(f"{option} file is missing or not a regular file: {path}.")
+        with path.open("rb") as stream:
+            stream.read(1)
+    except OSError as exc:
+        raise ValueError(f"Cannot read {option} file {path}: {exc}. Check permissions.") from exc
+
+
+def load_labels(path: Path) -> tuple[str, ...]:
+    validate_readable_file(path, "--labels")
+    try:
+        labels = tuple(line.strip() for line in path.read_text(encoding="utf-8").splitlines())
+    except (OSError, UnicodeError) as exc:
+        raise ValueError(
+            f"Cannot read labels {path}: {exc}. Use a readable UTF-8 class-name file."
+        ) from exc
+    if (
+        len(labels) != CLASS_COUNT
+        or any(not label for label in labels)
+        or len(set(labels)) != CLASS_COUNT
+    ):
+        raise ValueError(
+            f"Labels {path} must contain exactly {CLASS_COUNT} nonempty, unique names, "
+            "one per line in COCO order. Use models/classes.txt."
+        )
+    return labels
+
+
 @dataclass(frozen=True)
 class PipelineConfig:
     source: SourceSpec
@@ -88,6 +122,9 @@ class PipelineConfig:
     max_frames: int | None = None
     confidence: float = 0.25
     iou: float = 0.45
+    model: Path | None = None
+    labels: Path | None = None
+    label_names: tuple[str, ...] = field(init=False, default=(), repr=False)
 
     def __post_init__(self) -> None:
         unit_interval(self.confidence, "--confidence")
@@ -96,6 +133,16 @@ class PipelineConfig:
             type(self.max_frames) is not int or self.max_frames < 1
         ):
             raise ValueError("--max-frames must be a positive integer.")
+        if self.model is not None:
+            try:
+                validate_readable_file(self.model, "--model")
+            except ValueError as exc:
+                raise ValueError(model_context(self.model, str(exc))) from exc
+            if self.labels is None:
+                object.__setattr__(self, "labels", DEFAULT_LABELS)
+            object.__setattr__(self, "label_names", load_labels(self.labels))
+        elif self.labels is not None:
+            raise ValueError("--labels requires --model; omit both for media passthrough.")
         if self.output is not None:
             self._validate_output()
 
@@ -118,6 +165,14 @@ class PipelineConfig:
                 if path.resolve() == source.resolve() or (path.exists() and path.samefile(source)):
                     raise ValueError(
                         "Output must differ from the source file; choose another path."
+                    )
+            for name, protected in (("model", self.model), ("labels", self.labels)):
+                if protected is not None and (
+                    path.resolve() == protected.resolve()
+                    or (path.exists() and path.samefile(protected))
+                ):
+                    raise ValueError(
+                        f"Output must differ from the {name} file; choose another path."
                     )
             for parent in path.parents:
                 if parent.exists() and not parent.is_dir():

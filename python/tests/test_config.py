@@ -121,3 +121,60 @@ def test_cli_configuration_errors(arguments, message: str, capsys) -> None:
         main(arguments)
     assert error.value.code == 2
     assert message in capsys.readouterr().err
+
+
+def test_detector_config_default_labels(model_path: Path) -> None:
+    config = PipelineConfig(parse_source("0"), model=model_path)
+    assert len(config.label_names) == 80
+    assert config.label_names[0] == "person"
+    assert config.label_names[-1] == "toothbrush"
+
+
+def test_custom_labels(model_path: Path, tmp_path: Path) -> None:
+    path = tmp_path / "labels.txt"
+    names = tuple(f"name {index}" for index in range(80))
+    path.write_text("\n".join(names) + "\n")
+    assert PipelineConfig(parse_source("0"), model=model_path, labels=path).label_names == names
+
+
+@pytest.mark.parametrize(
+    "contents", [b"", b"one\n", b"one\n" * 80, b"\n" + b"one\n" * 79, b"\xff\xfe"]
+)
+def test_invalid_labels(model_path: Path, tmp_path: Path, contents: bytes) -> None:
+    path = tmp_path / "labels.txt"
+    path.write_bytes(contents)
+    with pytest.raises(ValueError, match="[Ll]abels"):
+        PipelineConfig(parse_source("0"), model=model_path, labels=path)
+
+
+def test_labels_require_model(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="requires --model"):
+        PipelineConfig(parse_source("0"), labels=tmp_path / "labels.txt")
+
+
+@pytest.mark.parametrize("option", ["model", "labels"])
+def test_missing_detector_paths(model_path: Path, tmp_path: Path, option: str) -> None:
+    options = {"model": model_path, option: tmp_path / "missing"}
+    with pytest.raises(ValueError, match="missing or not a regular file"):
+        PipelineConfig(parse_source("0"), **options)
+
+
+def test_unreadable_model(model_path: Path, monkeypatch) -> None:
+    original_open = Path.open
+
+    def denied(path, *args, **kwargs):
+        if path == model_path:
+            raise PermissionError("denied")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", denied)
+    with pytest.raises(ValueError, match="Cannot read --model"):
+        PipelineConfig(parse_source("0"), model=model_path)
+
+
+@pytest.mark.parametrize("option", ["--model", "--labels"])
+def test_empty_detector_cli_paths(option: str, capsys) -> None:
+    with pytest.raises(SystemExit) as error:
+        main(["--source", "0", option, ""])
+    assert error.value.code == 2
+    assert option in capsys.readouterr().err
