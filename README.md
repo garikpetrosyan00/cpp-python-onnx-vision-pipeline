@@ -2,7 +2,7 @@
 
 Equivalent object-detection pipelines in modern C++ and Python using OpenCV and ONNX Runtime on Ubuntu Linux. The finished project will make preprocessing, inference, postprocessing, rendering, and benchmarking directly comparable across both implementations.
 
-> Status: Phase 3 adds Python-only headless metrics and benchmark JSON/CSV output to the Phase 2 YOLOX-Nano detector and Phase 1 passthrough. C++ remains a Phase 0 help/version bootstrap. Cross-language comparison and C++ benchmarks have not started.
+> Status: Phase 4 adds a C++ passthrough media pipeline for local images, videos, and cameras. Python has Phase 3 metrics and benchmark output. C++ inference, metrics, and cross-language comparison have not started.
 
 ## Planned Stack
 
@@ -35,6 +35,23 @@ cmake --build build -j
 ./build/vision_cpp --help
 ctest --test-dir build --output-on-failure
 ```
+
+## C++ Media Pipeline (Phase 4)
+
+The C++ executable now passes original frames through without loading a model or drawing detections. Build it as above, then use local paths:
+
+```bash
+# Headless image passthrough; parent directories are created.
+./build/vision_cpp --source path/to/image.png --output outputs/copy.png --no-display
+
+# Headless video passthrough, limited to 100 frames.
+./build/vision_cpp --source path/to/video.mp4 --output outputs/copy.avi --no-display --max-frames 100
+
+# Interactive camera input; use Q or ESC to exit.
+./build/vision_cpp --source 0
+```
+
+`--source` accepts a bare non-negative camera index or a supported local image/video file. `--confidence` and `--iou` are validated as finite values in [0, 1], but remain unused until C++ inference begins. `--max-frames` must be positive. Use `--no-display` on headless systems. Image sources save image formats; video and camera sources save `.avi`/`.mkv` (MJPG), `.mp4`/`.mov` (mp4v), or `.webm` (VP80) when the local OpenCV codec is available. Output is staged beside the requested destination and decoded before it replaces an existing file. CTest uses a small self-contained assertion executable because GoogleTest is not installed in this environment; it downloads no test dependencies.
 
 Run all Phase 0 checks:
 
