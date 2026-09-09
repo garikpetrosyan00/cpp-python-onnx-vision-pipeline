@@ -1,0 +1,32 @@
+# Python
+python/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# CMake and native builds
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# Downloaded dependencies and models
+third_party/
+models/*.onnx
+models/*.ort
+models/*.bin
+
+# Generated outputs and benchmark runs
+outputs/
+benchmarks/results/*.json
+benchmarks/results/*.csv
+benchmarks/results/*.tmp
+
+# Local tooling
+.idea/
+.vscode/
+.DS_Store
+*.swp

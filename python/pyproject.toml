@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vision-pipeline"
+version = "0.1.0"
+description = "Cross-language OpenCV and ONNX Runtime vision pipeline"
+readme = {text = "Python implementation of the C++ and Python ONNX vision pipeline.", content-type = "text/markdown"}
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26,<3",
+  "onnxruntime>=1.24.1,<1.25",
+  "opencv-python>=4.8,<5",
+  "psutil>=5.9,<8",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+vision-pipeline = "vision_pipeline.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
