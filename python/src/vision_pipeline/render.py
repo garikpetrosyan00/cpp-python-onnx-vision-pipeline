@@ -86,18 +86,29 @@ class Renderer:
             raise MediaError("No display session found. Run with --no-display for headless use.")
         return self
 
-    def render(self, frame: Frame, detections: Sequence[Detection] = ()) -> bool:
-        """Save/display annotated frames; return False when Q or ESC is pressed."""
+    def render_processing(self, frame: Frame, detections: Sequence[Detection] = ()) -> None:
+        """Render processing only; GUI wait is deliberately a separate timing boundary."""
         frame = annotate(frame, detections)
         if self.config.output is not None:
             self._save(frame)
         if self.config.no_display:
-            return True
+            return
         try:
             if not self._window_open:
                 cv2.namedWindow(self._window_name, cv2.WINDOW_AUTOSIZE)
                 self._window_open = True
             cv2.imshow(self._window_name, frame)
+        except cv2.error as exc:
+            raise MediaError(
+                "Cannot display frames. Use --no-display, or check your GUI session "
+                f"and OpenCV GUI support: {exc}"
+            ) from exc
+
+    def wait_for_exit(self) -> bool:
+        """Intentional GUI wait; callers exclude this delay from render/total timing."""
+        if self.config.no_display:
+            return True
+        try:
             is_image = self.config.source.kind is SourceKind.IMAGE
             delay = 30 if is_image else max(1, min(1000, round(1000 / self.fps)))
             while True:
@@ -111,6 +122,11 @@ class Renderer:
                 "Cannot display frames. Use --no-display, or check your GUI session "
                 f"and OpenCV GUI support: {exc}"
             ) from exc
+
+    def render(self, frame: Frame, detections: Sequence[Detection] = ()) -> bool:
+        """Compatibility wrapper combining processing and interactive waiting."""
+        self.render_processing(frame, detections)
+        return self.wait_for_exit()
 
     def _save(self, frame: Frame) -> None:
         output = self.config.output

@@ -178,3 +178,33 @@ def test_empty_detector_cli_paths(option: str, capsys) -> None:
         main(["--source", "0", option, ""])
     assert error.value.code == 2
     assert option in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("value", ["-1", "1.5", "bad", ""])
+def test_invalid_warmup(value: str, capsys) -> None:
+    with pytest.raises(SystemExit) as error:
+        main(["--source", "0", "--warmup", value])
+    assert error.value.code == 2
+    assert "--warmup" in capsys.readouterr().err
+
+
+def test_benchmark_requires_headless_mode(capsys) -> None:
+    with pytest.raises(SystemExit) as error:
+        main(["--source", "0", "--benchmark"])
+    assert error.value.code == 2
+    assert "--benchmark requires --no-display" in capsys.readouterr().err
+
+
+def test_benchmark_output_requires_mode(capsys) -> None:
+    with pytest.raises(SystemExit) as error:
+        main(["--source", "0", "--benchmark-output", "result.json"])
+    assert error.value.code == 2
+    assert "requires --benchmark" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("value", ["result.csv", "result", ""])
+def test_benchmark_output_must_be_json(value: str, capsys) -> None:
+    with pytest.raises(SystemExit) as error:
+        main(["--source", "0", "--benchmark", "--no-display", "--benchmark-output", value])
+    assert error.value.code == 2
+    assert "benchmark-output" in capsys.readouterr().err

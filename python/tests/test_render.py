@@ -43,3 +43,18 @@ def test_all_drawing_coordinates_clamped(monkeypatch, size) -> None:
 def test_empty_detections_keep_original_frame() -> None:
     frame = np.zeros((10, 10, 3), dtype=np.uint8)
     assert annotate(frame, []) is frame
+
+
+def test_render_processing_does_not_wait(image_path, monkeypatch) -> None:
+    calls = MagicMock()
+    for name in ("namedWindow", "imshow", "waitKey", "destroyWindow"):
+        monkeypatch.setattr(cv2, name, getattr(calls, name))
+    calls.waitKey.return_value = ord("q")
+    from vision_pipeline.config import PipelineConfig, parse_source
+    from vision_pipeline.render import Renderer
+
+    with Renderer(PipelineConfig(parse_source(str(image_path))), 30) as renderer:
+        renderer.render_processing(np.zeros((10, 10, 3), dtype=np.uint8))
+        assert calls.waitKey.call_count == 0
+        assert renderer.wait_for_exit() is False
+    assert calls.waitKey.call_count == 1

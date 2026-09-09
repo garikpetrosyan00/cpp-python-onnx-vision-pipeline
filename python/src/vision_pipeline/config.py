@@ -84,6 +84,12 @@ def positive_integer(value: str) -> int:
     return int(value)
 
 
+def nonnegative_integer(value: str, name: str) -> int:
+    if not re.fullmatch(r"[0-9]+", value):
+        raise ValueError(f"{name} must be a non-negative integer.")
+    return int(value)
+
+
 def validate_readable_file(path: Path, option: str) -> None:
     try:
         if not path.is_file():
@@ -124,6 +130,9 @@ class PipelineConfig:
     iou: float = 0.45
     model: Path | None = None
     labels: Path | None = None
+    benchmark: bool = False
+    warmup: int = 5
+    benchmark_output: Path | None = None
     label_names: tuple[str, ...] = field(init=False, default=(), repr=False)
 
     def __post_init__(self) -> None:
@@ -133,6 +142,15 @@ class PipelineConfig:
             type(self.max_frames) is not int or self.max_frames < 1
         ):
             raise ValueError("--max-frames must be a positive integer.")
+        if type(self.warmup) is not int or self.warmup < 0:
+            raise ValueError("--warmup must be a non-negative integer.")
+        if self.benchmark and not self.no_display:
+            raise ValueError("--benchmark requires --no-display because GUI wait time is excluded.")
+        if self.benchmark_output is not None:
+            if not self.benchmark:
+                raise ValueError("--benchmark-output requires --benchmark.")
+            if self.benchmark_output.suffix.lower() != ".json":
+                raise ValueError("--benchmark-output must be a .json path.")
         if self.model is not None:
             try:
                 validate_readable_file(self.model, "--model")

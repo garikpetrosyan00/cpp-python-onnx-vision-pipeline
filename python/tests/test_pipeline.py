@@ -1,5 +1,6 @@
 """End-to-end output and lifecycle tests, with camera and GUI calls mocked."""
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -10,6 +11,7 @@ import pytest
 from vision_pipeline.cli import main
 from vision_pipeline.config import PipelineConfig, parse_source
 from vision_pipeline.input_source import InputSource, MediaError
+from vision_pipeline.metrics import BenchmarkError
 from vision_pipeline.pipeline import run_pipeline
 from vision_pipeline.render import Renderer
 
@@ -400,3 +402,103 @@ def test_inference_failure_preserves_existing_output(
     assert output.read_bytes() == b"existing output"
     assert not list(tmp_path.glob(".existing-*"))
     assert "inference failed" in capsys.readouterr().err
+
+
+def test_passthrough_benchmark_warmup_and_measured_limit(video_path: Path, tmp_path: Path) -> None:
+    result = tmp_path / "benchmark.json"
+    config = PipelineConfig(
+        parse_source(str(video_path)),
+        no_display=True,
+        benchmark=True,
+        warmup=2,
+        max_frames=3,
+        benchmark_output=result,
+    )
+    assert run_pipeline(config) == 3
+    document = json.loads(result.read_text())
+    assert document["completed_warmup_frames"] == 2
+    assert document["completed_measured_frames"] == 3
+    assert document["requested_measured_frames"] == 3
+    assert document["mode"] == "passthrough"
+    assert all(
+        document["timings"][name]["mean_ms"] == 0
+        for name in ("preprocess", "inference", "postprocess")
+    )
+    assert document["timings"]["capture"]["count"] == 3
+    assert document["effective_fps"] is not None
+    assert result.with_suffix(".csv").is_file()
+
+
+def test_benchmark_eof_before_measurement_fails_and_preserves_results(
+    video_path: Path, tmp_path: Path
+) -> None:
+    result = tmp_path / "existing.json"
+    csv_path = result.with_suffix(".csv")
+    result.write_text('{"existing": true}\n')
+    csv_path.write_text("existing,csv\n")
+    config = PipelineConfig(
+        parse_source(str(video_path)),
+        no_display=True,
+        benchmark=True,
+        warmup=6,
+        benchmark_output=result,
+    )
+    with pytest.raises(BenchmarkError, match="before one measured frame"):
+        run_pipeline(config)
+    assert result.read_text() == '{"existing": true}\n'
+    assert csv_path.read_text() == "existing,csv\n"
+
+
+def test_detector_benchmark_reuses_session_and_reports_metadata(
+    video_path: Path, model_path: Path, tmp_path: Path, mocked_session
+) -> None:
+    session, constructor = mocked_session
+    result = tmp_path / "detector.json"
+    config = PipelineConfig(
+        parse_source(str(video_path)),
+        no_display=True,
+        benchmark=True,
+        warmup=1,
+        max_frames=2,
+        benchmark_output=result,
+        model=model_path,
+    )
+    assert run_pipeline(config) == 2
+    document = json.loads(result.read_text())
+    constructor.assert_called_once()
+    assert session.run.call_count == 3
+    assert document["mode"] == "detector"
+    assert document["provider"] == "CPUExecutionProvider"
+    assert document["model_sha256"]
+    assert document["completed_warmup_frames"] == 1
+    assert document["completed_measured_frames"] == 2
+    assert all(document["timings"][name]["count"] == 2 for name in document["timings"])
+
+
+def test_benchmark_interrupt_does_not_publish_result(
+    video_path: Path, tmp_path: Path, monkeypatch
+) -> None:
+    result = tmp_path / "result.json"
+    original = Renderer.render_processing
+    calls = 0
+
+    def interrupted(self, frame, detections=()):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise KeyboardInterrupt
+        return original(self, frame, detections)
+
+    monkeypatch.setattr(Renderer, "render_processing", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        run_pipeline(
+            PipelineConfig(
+                parse_source(str(video_path)),
+                no_display=True,
+                benchmark=True,
+                warmup=0,
+                benchmark_output=result,
+            )
+        )
+    assert not result.exists()
+    assert not result.with_suffix(".csv").exists()

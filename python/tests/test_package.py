@@ -12,7 +12,7 @@ def test_parser_identity() -> None:
 
 def test_main_prints_help(capsys) -> None:
     assert main([]) == 0
-    assert "Phase 2 CPU detector" in capsys.readouterr().out
+    assert "Phase 3 metrics" in capsys.readouterr().out
 
 
 def test_help_and_version_without_runtime_dependencies() -> None:
