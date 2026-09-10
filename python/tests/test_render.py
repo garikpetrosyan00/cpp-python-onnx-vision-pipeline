@@ -46,6 +46,7 @@ def test_empty_detections_keep_original_frame() -> None:
 
 
 def test_render_processing_does_not_wait(image_path, monkeypatch) -> None:
+    monkeypatch.setenv("DISPLAY", ":99")
     calls = MagicMock()
     for name in ("namedWindow", "imshow", "waitKey", "destroyWindow"):
         monkeypatch.setattr(cv2, name, getattr(calls, name))
