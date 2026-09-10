@@ -50,7 +50,7 @@ This decision remains subject to a Phase 2 artifact audit: record the exact rele
 
 ### Repository license
 
-Do not add a project `LICENSE` until the owner chooses the license for original repository code. Third-party model and asset notices remain separate from the repository's own license.
+Original repository code and project-authored documentation are Apache-2.0 under the root `LICENSE`. `NOTICE` separates that license from retained YOLOX attribution and the separately downloaded ONNX Runtime/model artifacts. The YOLOX ONNX weights are not redistributed and have no separately verified weight license.
 
 ## Phase 0 - Planning and Repository Bootstrap
 
@@ -326,10 +326,9 @@ Start only after Phase 8 and the core Definition of Done are complete. Each exte
 
 ## Risk Register and Open Decisions
 
-1. **Repository license:** owner selection is still required before adding a license for original code.
-2. **Model artifact licensing:** the upstream source is Apache-2.0, but the exact ONNX release asset has no separate verified weight license/model card. The repository does not redistribute it.
-3. **Environment variance:** video codec/backend availability, GUI support, camera access, and host-specific benchmark timing vary by machine.
-4. **Scope:** the completed core supports only the audited CPU, static batch-one YOLOX-Nano contract. Phase 9 extensions require separate planning and evidence.
+1. **Model artifact licensing:** the upstream source is Apache-2.0, but the exact ONNX release asset has no separate verified weight license/model card. The repository does not redistribute it.
+2. **Environment variance:** video codec/backend availability, GUI support, camera access, and host-specific benchmark timing vary by machine.
+3. **Scope:** the completed core supports only the audited CPU, static batch-one YOLOX-Nano contract. Phase 9 extensions require separate planning and evidence.
 
 ## Phase Boundary Report Template
 

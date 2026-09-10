@@ -127,7 +127,7 @@ The low confidence threshold is used only to make the synthetic fixture’s mode
 
 - CPU-only, one audited static YOLOX-Nano model, fixed 416×416 batch-one contract. No GPU providers, batching, web service, Docker, cloud, or optional extensions are included.
 - The YOLOX source is Apache-2.0, but the exact ONNX release asset has no separate model card or weight license. The repository does not redistribute model weights. [models/README.md](models/README.md) and [docs/MODEL.md](docs/MODEL.md) record the evidence.
-- This repository has no chosen license for original code; owner selection is still required.
+- Original repository code and project-authored documentation are licensed under Apache-2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE). Third-party attribution remains separate.
 - Video encoding/decoding depends on local OpenCV/codec support. GUI use needs a desktop/OpenCV GUI backend; camera operation depends on attached hardware and is mocked in tests.
 - The parity result covers the audited model, fixed image, CPU providers, and documented configuration. Benchmark results are one host-specific run and vary with CPU, scheduling, OpenCV, codec, and ONNX Runtime builds.
 

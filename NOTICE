@@ -1,0 +1,21 @@
+Copyright 2026 Garik Petrosyan
+
+Original source code and project-authored documentation in this repository are
+licensed under Apache License 2.0; see LICENSE.
+
+Third-party notices
+---------------------
+The ordered COCO class names in models/classes.txt and the documented YOLOX
+preprocessing, decoding, and NMS source provenance are attributed to Megvii,
+Inc. and its affiliates. Their retained Apache-2.0 license is at
+models/LICENSE.YOLOX. See models/README.md and docs/MODEL.md for source links
+and the project-specific implementation choices.
+
+The YOLOX-Nano ONNX weight artifact is not included in this repository. It is
+downloaded separately into ignored models/detector.onnx after size and SHA-256
+verification. The repository makes no claim that Apache-2.0 source licensing
+supplies a separate license for those weights; see docs/MODEL.md.
+
+The ONNX Runtime archive is downloaded separately into ignored
+third_party/onnxruntime/. Its bundled license and third-party notices remain
+with that local archive; they are not redistributed by this repository.

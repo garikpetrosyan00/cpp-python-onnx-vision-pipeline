@@ -18,6 +18,6 @@ This repository demonstrates delivery of the same bounded computer-vision pipeli
 
 ## Technical decisions and limits
 
-The completed core is intentionally CPU-only and supports only the audited static YOLOX-Nano contract. It does not include CUDA, Docker, cloud services, batching, asynchronous pipelines, web APIs, additional detectors, or broad performance claims. Codec, GUI, camera, and benchmark behavior depend on the local environment. The upstream source is Apache-2.0, but the ONNX weight artifact has no separately verified weight license/model card; weights are downloaded locally and are not redistributed. Original repository licensing remains an owner decision.
+The completed core is intentionally CPU-only and supports only the audited static YOLOX-Nano contract. It does not include CUDA, Docker, cloud services, batching, asynchronous pipelines, web APIs, additional detectors, or broad performance claims. Codec, GUI, camera, and benchmark behavior depend on the local environment. Original repository code is Apache-2.0; see the root [LICENSE](../LICENSE) and [NOTICE](../NOTICE). The upstream source is also Apache-2.0, but the ONNX weight artifact has no separately verified weight license/model card; weights are downloaded locally and are not redistributed.
 
 Phase 9 optional extensions have not started.
