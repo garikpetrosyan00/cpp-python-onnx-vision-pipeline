@@ -3,6 +3,8 @@
 #include "vision/renderer.hpp"
 
 #include <atomic>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <vector>
 
@@ -41,6 +43,9 @@ vision::Config passthrough_config(vision::SourceSpec source, std::optional<std::
   config.labels = std::nullopt;
   config.label_names = {};
   config.detections_json = std::nullopt;
+  config.benchmark = false;
+  config.warmup = 5;
+  config.benchmark_output = std::nullopt;
   return config;
 }
 
@@ -83,6 +88,18 @@ void run_pipeline_tests() {
   std::size_t output_frames = 0;
   while (verified_video.read(video_frame)) ++output_frames;
   check(output_frames == 2, "Video output did not contain the requested number of frames.");
+
+  auto benchmark_config = passthrough_config({vision::SourceKind::video, -1, video_source}, std::nullopt, true, 2U);
+  benchmark_config.benchmark = true;
+  benchmark_config.warmup = 1;
+  benchmark_config.benchmark_output = directory.path() / "benchmark.json";
+  const auto benchmark_result = vision::run_pipeline(benchmark_config, stop);
+  check(benchmark_result.frames == 2, "Benchmark max-frame limit must exclude warm-up frames.");
+  std::ifstream benchmark_stream(*benchmark_config.benchmark_output);
+  const std::string benchmark_json((std::istreambuf_iterator<char>(benchmark_stream)), {});
+  check(benchmark_json.find("\"completed_warmup_frames\":1") != std::string::npos &&
+            benchmark_json.find("\"completed_measured_frames\":2") != std::string::npos,
+        "Benchmark warm-up and measured frame boundaries are incorrect.");
 
   const auto interactive = passthrough_config({vision::SourceKind::image, -1, source_path}, std::nullopt, false, std::nullopt);
   auto gui_state = std::make_shared<FakeGui::State>();

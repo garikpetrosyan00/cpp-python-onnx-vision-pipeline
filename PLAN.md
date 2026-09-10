@@ -253,7 +253,7 @@ Acceptance: RAII-based image/video/camera handling, CLI validation, EOF/exit/out
 
 Goal: run the same audited model with equivalent math through the ONNX Runtime C++ API.
 
-Status: complete on the audited CPU-only path; Phase 6 parity and Phase 7 benchmarking remain unstarted.
+Status: complete on the audited CPU-only path.
 
 Files: `preprocessor`, `inference_engine`, `postprocessor`, `detection`, and related tests; CMake ONNX Runtime discovery; `scripts/setup_cpp.sh` finalization.
 
@@ -273,7 +273,7 @@ Acceptance: ONNX objects and buffers have clear RAII ownership; one session is r
 
 Goal: prove Python and C++ produce equivalent canonical detections.
 
-Status: complete for the audited CPU model and tracked 416x416 fixture. The real Python/C++ run produced 32 ordered detections within the documented `1e-5` absolute tolerance. Benchmarking remains Phase 7 work.
+Status: complete for the audited CPU model and tracked 416x416 fixture. The real Python/C++ run produced 32 ordered detections within the documented `1e-5` absolute tolerance.
 
 Files: JSON detection export in both CLIs, `scripts/check_parity.py`, fixed legal test image, and parity documentation/tests.
 
@@ -289,6 +289,8 @@ Acceptance: sorted class IDs match; confidence and original-frame box coordinate
 ## Phase 7 - Comparative Benchmark
 
 Goal: measure both implementations under identical conditions.
+
+Status: complete for a tracked project-generated 416x416/15 FPS/MJPG fixture and one documented host-specific CPU run. Phase 8 remains unstarted.
 
 Files: `benchmarks/run_benchmarks.py`, schema validation, selected result files, `benchmarks/REPORT.md`, and `docs/BENCHMARKING.md`.
 

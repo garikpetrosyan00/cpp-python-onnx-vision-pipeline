@@ -159,6 +159,19 @@ std::size_t parse_positive_integer(const std::string& value, const std::string& 
   }
 }
 
+std::size_t parse_nonnegative_integer(const std::string& value, const std::string& option) {
+  if (!digits_only(value)) throw ConfigError(option + " must be a non-negative integer.");
+  try {
+    const auto parsed = std::stoull(value);
+    if (parsed > std::numeric_limits<std::size_t>::max()) {
+      throw ConfigError(option + " must be a non-negative integer.");
+    }
+    return static_cast<std::size_t>(parsed);
+  } catch (const std::exception&) {
+    throw ConfigError(option + " must be a non-negative integer.");
+  }
+}
+
 CliOptions parse_cli(int argc, char* argv[]) {
   if (argc == 1) {
     return {CliAction::help, std::nullopt};
@@ -168,7 +181,10 @@ CliOptions parse_cli(int argc, char* argv[]) {
   std::optional<std::filesystem::path> model;
   std::optional<std::filesystem::path> labels;
   std::optional<std::filesystem::path> detections_json;
+  std::optional<std::filesystem::path> benchmark_output;
   bool no_display = false;
+  bool benchmark = false;
+  std::size_t warmup = 5;
   std::optional<std::size_t> max_frames;
   double confidence = 0.25;
   double iou = 0.45;
@@ -180,27 +196,34 @@ CliOptions parse_cli(int argc, char* argv[]) {
     else if (argument == "--model") model = option_value(index, argc, argv, argument);
     else if (argument == "--labels") labels = option_value(index, argc, argv, argument);
     else if (argument == "--detections-json") detections_json = option_value(index, argc, argv, argument);
+    else if (argument == "--benchmark-output") benchmark_output = option_value(index, argc, argv, argument);
     else if (argument == "--output") output = option_value(index, argc, argv, argument);
     else if (argument == "--max-frames") max_frames = parse_positive_integer(option_value(index, argc, argv, argument), argument);
     else if (argument == "--confidence") confidence = parse_unit_interval(option_value(index, argc, argv, argument), argument);
     else if (argument == "--iou") iou = parse_unit_interval(option_value(index, argc, argv, argument), argument);
+    else if (argument == "--warmup") warmup = parse_nonnegative_integer(option_value(index, argc, argv, argument), argument);
+    else if (argument == "--benchmark") benchmark = true;
     else if (argument == "--no-display") no_display = true;
-    else if (argument == "--benchmark" || argument == "--warmup" || argument == "--benchmark-output") {
-      throw ConfigError(argument + " is unavailable: ONNX inference and benchmarking begin in Phase 5/7.");
-    } else {
-      throw ConfigError("Unknown option: " + argument + ". Run --help for supported Phase 4 options.");
+    else {
+      throw ConfigError("Unknown option: " + argument + ". Run --help for supported options.");
     }
   }
   if (!source) return {CliAction::help, std::nullopt};
   if (!model && labels) throw ConfigError("--labels requires --model; omit both for media passthrough.");
   if (detections_json && !model) throw ConfigError("--detections-json requires --model.");
   if (detections_json && detections_json->extension() != ".json") throw ConfigError("--detections-json must be a .json path.");
+  if (benchmark && !no_display) throw ConfigError("--benchmark requires --no-display so GUI wait time is never measured.");
+  if (benchmark_output && !benchmark) throw ConfigError("--benchmark-output requires --benchmark.");
+  if (benchmark_output && lowercase(benchmark_output->extension().string()) != ".json") {
+    throw ConfigError("--benchmark-output must be a .json path.");
+  }
   if (model) {
     std::error_code error;
     if (!std::filesystem::is_regular_file(*model,error) || error) throw ConfigError("--model file is missing or not a regular file: " + model->string());
     if (!labels) labels = std::filesystem::path("models/classes.txt");
   }
-  Config config{parse_source(*source), output, no_display, max_frames, confidence, iou, model, labels, {}, detections_json};
+  Config config{parse_source(*source), output, no_display, max_frames, confidence, iou, model, labels,
+                {}, detections_json, benchmark, warmup, benchmark_output};
   if (config.detections_json && config.source.kind != SourceKind::image) throw ConfigError("--detections-json currently requires an image source for one canonical document.");
   if (config.labels) config.label_names=load_labels(*config.labels);
   validate_output(config);
@@ -209,13 +232,16 @@ CliOptions parse_cli(int argc, char* argv[]) {
 
 std::string help_text() {
   return "vision_cpp 0.1.0\n"
-         "C++ media pipeline (Phase 5; optional CPU YOLOX-Nano detection)\n\n"
+         "C++ media pipeline (Phase 7; optional CPU YOLOX-Nano detection and benchmarking)\n\n"
          "Usage:\n  vision_cpp --source SOURCE [options]\n\n"
          "Options:\n"
          "  --source SOURCE       Camera index, image, or video file\n"
          "  --model PATH          Audited YOLOX-Nano ONNX model (CPU only)\n"
          "  --labels PATH         80 COCO labels (defaults to models/classes.txt)\n"
          "  --detections-json P   Write canonical detections JSON (model image only)\n"
+         "  --benchmark           Measure frame stages; requires --no-display\n"
+         "  --warmup N            Unmeasured benchmark frames (default: 5)\n"
+         "  --benchmark-output P  Benchmark JSON path (also writes sibling CSV)\n"
          "  --output PATH         Save unchanged image/video frames\n"
          "  --no-display          Run without GUI windows\n"
          "  --max-frames N        Stop after a positive number of frames\n"

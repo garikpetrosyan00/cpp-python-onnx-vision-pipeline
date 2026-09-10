@@ -100,12 +100,26 @@ cv::Mat Renderer::annotate(const cv::Mat& frame, const std::vector<Detection>& d
 }
 
 bool Renderer::render(const cv::Mat& frame) {
+  render_processing(frame);
+  return wait_for_exit();
+}
+
+void Renderer::render_processing(const cv::Mat& frame) {
   if (frame.empty()) throw std::runtime_error("Cannot render an empty frame.");
   if (config_.output) save(frame);
-  if (config_.no_display) return true;
+  if (config_.no_display) return;
   try {
     gui_->show(window_name_, frame);
     window_open_ = true;
+  } catch (const cv::Exception& exception) {
+    throw std::runtime_error(std::string("Cannot display frames. Use --no-display or check GUI support: ") +
+                             exception.what());
+  }
+}
+
+bool Renderer::wait_for_exit() {
+  if (config_.no_display) return true;
+  try {
     const bool image = config_.source.kind == SourceKind::image;
     const int delay = image ? 30 : std::max(1, std::min(1000, static_cast<int>(1000.0 / fps_)));
     do {

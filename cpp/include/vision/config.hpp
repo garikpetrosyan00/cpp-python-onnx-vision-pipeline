@@ -27,6 +27,9 @@ struct Config {
   std::optional<std::filesystem::path> labels;
   std::vector<std::string> label_names;
   std::optional<std::filesystem::path> detections_json;
+  bool benchmark{false};
+  std::size_t warmup{5};
+  std::optional<std::filesystem::path> benchmark_output;
 };
 
 enum class CliAction { run, help, version };
@@ -44,6 +47,7 @@ class ConfigError : public std::runtime_error {
 SourceSpec parse_source(const std::string& value);
 double parse_unit_interval(const std::string& value, const std::string& option);
 std::size_t parse_positive_integer(const std::string& value, const std::string& option);
+std::size_t parse_nonnegative_integer(const std::string& value, const std::string& option);
 CliOptions parse_cli(int argc, char* argv[]);
 std::string help_text();
 

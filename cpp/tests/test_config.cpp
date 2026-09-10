@@ -43,6 +43,7 @@ void run_config_tests() {
   expect_throw([] { vision::parse_unit_interval("1.1", "--confidence"); }, "between 0 and 1");
   expect_throw([] { vision::parse_unit_interval("nan", "--iou"); }, "between 0 and 1");
   expect_throw([] { vision::parse_positive_integer("0", "--max-frames"); }, "positive integer");
+  expect_throw([] { vision::parse_nonnegative_integer("-1", "--warmup"); }, "non-negative");
 
   const auto options = parse({"vision_cpp", "--source", image.string(), "--output",
                               (directory.path() / "result.jpg").string(), "--no-display", "--max-frames", "1",
@@ -62,4 +63,10 @@ void run_config_tests() {
                "must be a .json");
   expect_throw([&] { parse({"vision_cpp", "--source", video.string(), "--model", model.string(), "--labels", labels.string(), "--detections-json", "result.json"}); },
                "requires an image source");
+  expect_throw([&] { parse({"vision_cpp", "--source", video.string(), "--benchmark"}); },
+               "requires --no-display");
+  expect_throw([&] { parse({"vision_cpp", "--source", video.string(), "--no-display", "--benchmark-output", "result.json"}); },
+               "requires --benchmark");
+  expect_throw([&] { parse({"vision_cpp", "--source", video.string(), "--no-display", "--benchmark", "--benchmark-output", "result.txt"}); },
+               "must be a .json");
 }

@@ -28,6 +28,8 @@ class Renderer {
   Renderer& operator=(const Renderer&) = delete;
 
   bool render(const cv::Mat& frame);
+  void render_processing(const cv::Mat& frame);
+  bool wait_for_exit();
   static cv::Mat annotate(const cv::Mat& frame, const std::vector<Detection>& detections);
   void finalize();
 

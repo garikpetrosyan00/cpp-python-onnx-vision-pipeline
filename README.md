@@ -2,7 +2,7 @@
 
 Equivalent object-detection pipelines in modern C++ and Python using OpenCV and ONNX Runtime on Ubuntu Linux. The finished project will make preprocessing, inference, postprocessing, rendering, and benchmarking directly comparable across both implementations.
 
-> Status: Phase 6 adds canonical detection JSON export and verifies Python/C++ CPU parity on a fixed generated fixture. Benchmarking has not started.
+> Status: Phase 7 adds compatible Python/C++ CPU benchmark export and one validated, host-specific comparison. Phase 8 has not started.
 
 ## Planned Stack
 
@@ -63,7 +63,7 @@ cmake --build build -j
   --source path/to/image.png --output outputs/detected.png --no-display
 ```
 
-The C++ detector uses one CPU ONNX Runtime session, BGR 0..255 top-left letterboxing, raw YOLOX decoding, class-aware NMS, and labelled rendering. It accepts only the audited static `[1,3,416,416]` to `[1,3549,85]` float32 contract. Phase 6 parity commands and limits are documented in [docs/PARITY.md](docs/PARITY.md); no benchmark claim is made.
+The C++ detector uses one CPU ONNX Runtime session, BGR 0..255 top-left letterboxing, raw YOLOX decoding, class-aware NMS, and labelled rendering. It accepts only the audited static `[1,3,416,416]` to `[1,3549,85]` float32 contract. Phase 6 parity commands and limits are documented in [docs/PARITY.md](docs/PARITY.md).
 
 Run all Phase 0 checks:
 
@@ -108,7 +108,7 @@ python/.venv/bin/python -m pip check
 
 Tests never download weights automatically. The real-model test skips only if the local model is absent and fails if present but invalid. To run only unit tests, use `python/.venv/bin/pytest python/tests -m "not real_model"`. The real-model smoke generates a deterministic color-gradient image and saves a readable annotated PNG at an intentionally low confidence threshold of 0.01. This exercises the full detector and renderer; synthetic-image predictions do not establish detection accuracy.
 
-## Python metrics and benchmark mode (Phase 3)
+## Comparative metrics and benchmark mode (Phase 7)
 
 ```bash
 python/.venv/bin/python -m vision_pipeline \
@@ -118,7 +118,7 @@ python/.venv/bin/python -m vision_pipeline \
   --benchmark-output benchmarks/results/python-run.json
 ```
 
-Benchmarking is Python-only and requires `--no-display`. It writes the requested JSON plus a sibling CSV after a clean run; if omitted, the default is `benchmarks/results/python-benchmark.json`. `--warmup` defaults to 5 and is excluded from aggregates. In benchmark mode `--max-frames` limits measured frames, not warm-up frames. Metrics cover capture, preprocessing, inference, postprocessing, rendering, total processing time, effective FPS, and an approximate current process RSS snapshot. GUI wait time is excluded from render/total/FPS. Passthrough benchmark mode works without a model and reports detector-stage values as zero. See [docs/BENCHMARKING.md](docs/BENCHMARKING.md) for the exact boundary, percentile, schema, and reproducibility definitions. C++ comparison remains Phase 7 work; no comparison results are claimed.
+Both CLIs require `--no-display` for benchmarking and write the requested JSON plus sibling CSV after a clean run. `--warmup` defaults to 5 and `--max-frames` limits measured frames, not warm-up frames. Metrics cover capture, preprocessing, inference, postprocessing, rendering, total processing time, effective FPS, and an approximate RSS snapshot; GUI wait time is excluded. Use [benchmarks/run_benchmarks.py](benchmarks/run_benchmarks.py) with the tracked `assets/sample/benchmark.avi` fixture to validate compatible real runs. See [docs/BENCHMARKING.md](docs/BENCHMARKING.md) and the measured [benchmark report](benchmarks/REPORT.md).
 
 ## Python Media Pipeline (Passthrough)
 
