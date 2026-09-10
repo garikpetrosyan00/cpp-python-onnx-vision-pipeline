@@ -1,4 +1,6 @@
-# Audited YOLOX-Nano contract (Phase 2)
+# Audited YOLOX-Nano contract
+
+This is the fixed model/math contract used by the completed Phase 0–8 core. Phase 6 parity and Phase 7 benchmarking do not expand this contract.
 
 Audit date: 2026-09-09. The actual downloaded bytes were checked with ONNX 1.22.0 (`onnx.checker.check_model`) and executed with ONNX Runtime 1.24.4 using only `CPUExecutionProvider`, Python 3.12.14, OpenCV 4.14.0, and NumPy 2.5.3.
 

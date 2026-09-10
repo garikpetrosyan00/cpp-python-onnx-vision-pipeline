@@ -15,8 +15,10 @@ fi
 PYTHONPATH="${project_root}/python/src" "${python_bin}" -m vision_pipeline --help >/dev/null
 PYTHONPATH="${project_root}/python/src" "${python_bin}" -m pytest "${project_root}/python/tests"
 
-cmake -S "${project_root}/cpp" -B "${build_dir}" -DCMAKE_BUILD_TYPE=Release
+"${project_root}/scripts/setup_cpp.sh"
+cmake -S "${project_root}/cpp" -B "${build_dir}" -DCMAKE_BUILD_TYPE=Release \
+    -DONNXRUNTIME_ROOT="${project_root}/third_party/onnxruntime"
 cmake --build "${build_dir}" -j
 ctest --test-dir "${build_dir}" --output-on-failure
 
-echo "Phase 0 smoke checks passed."
+echo "Core smoke checks passed (model-free tests; no model download)."

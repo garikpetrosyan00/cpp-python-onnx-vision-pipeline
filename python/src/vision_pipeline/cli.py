@@ -17,7 +17,7 @@ from vision_pipeline.model_contract import DetectorError
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="vision-pipeline",
-        description="Python vision pipeline (Phase 3 metrics; omit --model for passthrough)",
+        description="Python vision pipeline (CPU YOLOX-Nano; omit --model for passthrough)",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--source", help="Non-negative camera index (e.g. 0), image, or video path")

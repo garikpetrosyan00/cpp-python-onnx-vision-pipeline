@@ -1,5 +1,7 @@
 # Phase 6 parity
 
+Phase 6 is complete. This document records the bounded, reproducible evidence used by the finished Phase 0–8 core; it does not claim general cross-model or cross-platform equivalence.
+
 `assets/sample/parity.png` is a project-generated, tracked 416x416 PNG containing a deterministic BGR coordinate gradient. With zero-based pixel coordinates `(x, y)`, its OpenCV channel values are `B=(3x+y) mod 256`, `G=(x+2y) mod 256`, and `R=(5x+7y) mod 256`. It was generated as a NumPy `uint8` array and encoded losslessly with `cv2.imwrite`; it contains no third-party content. Its SHA-256 is `1f1fd7597addb87ab7273dd646192c33efcd28d9b3bfc72db477803b2135b10c`. Its exact model-size dimensions avoid resize-version differences.
 
 Both CLIs write `vision-pipeline-detections/v1`: schema/implementation/model contract identity, image dimensions, thresholds, and deterministic detections. Each detection has only `class_id`, `label`, `confidence`, `x1`, `y1`, `x2`, and `y2`. Publication is atomic after a successful image run.

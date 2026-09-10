@@ -1,5 +1,7 @@
 # Comparative CPU benchmarking (Phase 7)
 
+Phase 7 is complete. The report contains one validated host-specific run; this documentation describes how to reproduce the comparable conditions, not a universal performance claim.
+
 Both CLIs support the same headless benchmark schema and are compared by the Phase 7 runner.
 
 ```bash

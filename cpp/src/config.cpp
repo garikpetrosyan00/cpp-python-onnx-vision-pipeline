@@ -232,7 +232,7 @@ CliOptions parse_cli(int argc, char* argv[]) {
 
 std::string help_text() {
   return "vision_cpp 0.1.0\n"
-         "C++ media pipeline (Phase 7; optional CPU YOLOX-Nano detection and benchmarking)\n\n"
+         "C++ media pipeline (CPU YOLOX-Nano detection and benchmarking)\n\n"
          "Usage:\n  vision_cpp --source SOURCE [options]\n\n"
          "Options:\n"
          "  --source SOURCE       Camera index, image, or video file\n"

@@ -290,7 +290,7 @@ Acceptance: sorted class IDs match; confidence and original-frame box coordinate
 
 Goal: measure both implementations under identical conditions.
 
-Status: complete for a tracked project-generated 416x416/15 FPS/MJPG fixture and one documented host-specific CPU run. Phase 8 remains unstarted.
+Status: complete for a tracked project-generated 416x416/15 FPS/MJPG fixture and one documented host-specific CPU run.
 
 Files: `benchmarks/run_benchmarks.py`, schema validation, selected result files, `benchmarks/REPORT.md`, and `docs/BENCHMARKING.md`.
 
@@ -305,6 +305,8 @@ Acceptance: same host/model/source/frames/thresholds/warm-up/no-display settings
 ## Phase 8 - Documentation and Portfolio Polish
 
 Goal: make the stable core reproducible and credible to reviewers.
+
+Status: complete. The repository now has fresh-clone instructions, an editable architecture diagram, reproducible project-generated detector evidence, finalized operational documentation, portfolio notes, and CI/setup paths that do not claim a model download or real-model CI run. Phase 9 remains optional and unstarted.
 
 Files: final `README.md`, architecture diagram, all `docs/` pages, screenshot, demo workflow, CI hardening, and third-party notices.
 
@@ -324,15 +326,10 @@ Start only after Phase 8 and the core Definition of Done are complete. Each exte
 
 ## Risk Register and Open Decisions
 
-1. **Python version:** Ubuntu currently exposes Python 3.10.12, below the required 3.11. Phase 0 Python verification needs a user-approved Python 3.11+ installation or an already-installed alternate interpreter.
-2. **ONNX Runtime compatibility:** the 1.24.4 Python wheel installed successfully under Python 3.12, but the matching official C++ archive still needs Ubuntu 22.04/glibc verification before the exact shared version is locked.
-3. **Model artifact licensing:** the YOLOX source repository is Apache-2.0, but the exact ONNX asset and COCO labels still need provenance and redistribution notes before use.
-4. **Model output contract:** confirm whether the selected ONNX export contains decoded grids and record the exact output layout before implementing postprocessing.
-5. **OpenCV split:** C++ OpenCV 4.5.4 is installed, but Python OpenCV is absent; Python should use a constrained package dependency in its isolated environment.
-6. **C++ tests:** choose GoogleTest or Catch2 only after confirming the least fragile reproducible acquisition path; avoid hidden network downloads during normal CMake configure.
-7. **Repository license:** owner selection is required before adding a license for original code.
-8. **Demo assets/codecs:** use generated or clearly licensed small media; verify a codec available on the target Ubuntu host before promising saved video support.
-9. **GUI/headless behavior:** automated tests and benchmarks default to `--no-display`; interactive display is verified separately where a desktop session exists.
+1. **Repository license:** owner selection is still required before adding a license for original code.
+2. **Model artifact licensing:** the upstream source is Apache-2.0, but the exact ONNX release asset has no separate verified weight license/model card. The repository does not redistribute it.
+3. **Environment variance:** video codec/backend availability, GUI support, camera access, and host-specific benchmark timing vary by machine.
+4. **Scope:** the completed core supports only the audited CPU, static batch-one YOLOX-Nano contract. Phase 9 extensions require separate planning and evidence.
 
 ## Phase Boundary Report Template
 
