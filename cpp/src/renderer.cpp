@@ -13,6 +13,7 @@
 
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
 
 namespace vision {
@@ -85,6 +86,17 @@ Renderer::~Renderer() {
     std::filesystem::remove(temporary_, error);
   }
   if (window_open_ && gui_) gui_->destroy(window_name_);
+}
+
+cv::Mat Renderer::annotate(const cv::Mat& frame, const std::vector<Detection>& detections) {
+  if (detections.empty()) return frame;
+  cv::Mat canvas=frame.clone();
+  for(const auto& detection:detections) {
+    const cv::Scalar color(64+(detection.class_id*37+29)%192,64+(detection.class_id*67+83)%192,64+(detection.class_id*97+137)%192);
+    const int x1=std::clamp(static_cast<int>(detection.x1),0,canvas.cols-1), y1=std::clamp(static_cast<int>(detection.y1),0,canvas.rows-1), x2=std::clamp(static_cast<int>(detection.x2),0,canvas.cols-1), y2=std::clamp(static_cast<int>(detection.y2),0,canvas.rows-1);
+    cv::rectangle(canvas,{x1,y1},{x2,y2},color,2); const std::string text=detection.label+" "+cv::format("%.2f",detection.confidence); cv::putText(canvas,text,{x1,std::max(0,y1-4)},cv::FONT_HERSHEY_SIMPLEX,.5,color,1,cv::LINE_AA);
+  }
+  return canvas;
 }
 
 bool Renderer::render(const cv::Mat& frame) {

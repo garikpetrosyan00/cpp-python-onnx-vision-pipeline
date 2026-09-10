@@ -253,6 +253,8 @@ Acceptance: RAII-based image/video/camera handling, CLI validation, EOF/exit/out
 
 Goal: run the same audited model with equivalent math through the ONNX Runtime C++ API.
 
+Status: complete on the audited CPU-only path; Phase 6 parity and Phase 7 benchmarking remain unstarted.
+
 Files: `preprocessor`, `inference_engine`, `postprocessor`, `detection`, and related tests; CMake ONNX Runtime discovery; `scripts/setup_cpp.sh` finalization.
 
 Verification:

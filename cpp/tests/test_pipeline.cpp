@@ -28,6 +28,21 @@ class FakeGui final : public vision::Gui {
   std::shared_ptr<State> state_;
 };
 
+vision::Config passthrough_config(vision::SourceSpec source, std::optional<std::filesystem::path> output,
+                                  bool no_display, std::optional<std::size_t> max_frames) {
+  vision::Config config{};
+  config.source = std::move(source);
+  config.output = std::move(output);
+  config.no_display = no_display;
+  config.max_frames = max_frames;
+  config.confidence = 0.25;
+  config.iou = 0.45;
+  config.model = std::nullopt;
+  config.labels = std::nullopt;
+  config.label_names = {};
+  return config;
+}
+
 }  // namespace
 
 void run_pipeline_tests() {
@@ -43,7 +58,7 @@ void run_pipeline_tests() {
   }
   check(cv::imwrite(source_path.string(), original), "Could not create pipeline image fixture.");
 
-  vision::Config config{{vision::SourceKind::image, -1, source_path}, output_path, true, 1U, 0.25, 0.45};
+  const auto config = passthrough_config({vision::SourceKind::image, -1, source_path}, output_path, true, 1U);
   std::atomic_bool stop{false};
   const auto result = vision::run_pipeline(config, stop);
   check(result.frames == 1 && !result.interrupted, "Headless image pipeline did not process one frame.");
@@ -59,7 +74,7 @@ void run_pipeline_tests() {
   fixture_writer.write(original);
   fixture_writer.write(original);
   fixture_writer.release();
-  vision::Config video_config{{vision::SourceKind::video, -1, video_source}, video_output, true, 2U, 0.25, 0.45};
+  const auto video_config = passthrough_config({vision::SourceKind::video, -1, video_source}, video_output, true, 2U);
   const auto video_result = vision::run_pipeline(video_config, stop);
   check(video_result.frames == 2, "Video max-frame limit failed.");
   cv::VideoCapture verified_video(video_output.string());
@@ -68,7 +83,7 @@ void run_pipeline_tests() {
   while (verified_video.read(video_frame)) ++output_frames;
   check(output_frames == 2, "Video output did not contain the requested number of frames.");
 
-  vision::Config interactive{{vision::SourceKind::image, -1, source_path}, std::nullopt, false, std::nullopt, 0.25, 0.45};
+  const auto interactive = passthrough_config({vision::SourceKind::image, -1, source_path}, std::nullopt, false, std::nullopt);
   auto gui_state = std::make_shared<FakeGui::State>();
   auto gui = std::make_unique<FakeGui>('q', gui_state);
   {

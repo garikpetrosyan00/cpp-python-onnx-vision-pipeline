@@ -8,6 +8,7 @@
 #include <opencv2/videoio.hpp>
 
 #include "vision/config.hpp"
+#include "vision/detection.hpp"
 
 namespace vision {
 
@@ -27,6 +28,7 @@ class Renderer {
   Renderer& operator=(const Renderer&) = delete;
 
   bool render(const cv::Mat& frame);
+  static cv::Mat annotate(const cv::Mat& frame, const std::vector<Detection>& detections);
   void finalize();
 
  private:

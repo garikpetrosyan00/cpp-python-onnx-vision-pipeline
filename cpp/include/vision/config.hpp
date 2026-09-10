@@ -4,6 +4,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace vision {
 
@@ -22,6 +23,9 @@ struct Config {
   std::optional<std::size_t> max_frames;
   double confidence{0.25};
   double iou{0.45};
+  std::optional<std::filesystem::path> model;
+  std::optional<std::filesystem::path> labels;
+  std::vector<std::string> label_names;
 };
 
 enum class CliAction { run, help, version };

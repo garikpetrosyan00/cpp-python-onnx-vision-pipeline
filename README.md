@@ -2,7 +2,7 @@
 
 Equivalent object-detection pipelines in modern C++ and Python using OpenCV and ONNX Runtime on Ubuntu Linux. The finished project will make preprocessing, inference, postprocessing, rendering, and benchmarking directly comparable across both implementations.
 
-> Status: Phase 4 adds a C++ passthrough media pipeline for local images, videos, and cameras. Python has Phase 3 metrics and benchmark output. C++ inference, metrics, and cross-language comparison have not started.
+> Status: Phase 5 adds a CPU-only C++ YOLOX-Nano detector while retaining C++ passthrough mode when `--model` is omitted. C++ metrics, benchmarking, and cross-language parity have not started.
 
 ## Planned Stack
 
@@ -51,7 +51,19 @@ The C++ executable now passes original frames through without loading a model or
 ./build/vision_cpp --source 0
 ```
 
-`--source` accepts a bare non-negative camera index or a supported local image/video file. `--confidence` and `--iou` are validated as finite values in [0, 1], but remain unused until C++ inference begins. `--max-frames` must be positive. Use `--no-display` on headless systems. Image sources save image formats; video and camera sources save `.avi`/`.mkv` (MJPG), `.mp4`/`.mov` (mp4v), or `.webm` (VP80) when the local OpenCV codec is available. Output is staged beside the requested destination and decoded before it replaces an existing file. CTest uses a small self-contained assertion executable because GoogleTest is not installed in this environment; it downloads no test dependencies.
+`--source` accepts a bare non-negative camera index or a supported local image/video file. `--confidence` and `--iou` are validated as finite values in [0, 1] and control detection when `--model` is supplied. `--max-frames` must be positive. Use `--no-display` on headless systems. Image sources save image formats; video and camera sources save `.avi`/`.mkv` (MJPG), `.mp4`/`.mov` (mp4v), or `.webm` (VP80) when the local OpenCV codec is available. Output is staged beside the requested destination and decoded before it replaces an existing file. CTest uses a small self-contained assertion executable because GoogleTest is not installed in this environment; it downloads no test dependencies.
+
+For Phase 5, install the pinned local ONNX Runtime CPU archive, configure CMake with that path, and supply the audited model to enable labeled boxes:
+
+```bash
+scripts/setup_cpp.sh
+cmake -S cpp -B build -DCMAKE_BUILD_TYPE=Release -DONNXRUNTIME_ROOT="$PWD/third_party/onnxruntime"
+cmake --build build -j
+./build/vision_cpp --model models/detector.onnx --labels models/classes.txt \
+  --source path/to/image.png --output outputs/detected.png --no-display
+```
+
+The C++ detector uses one CPU ONNX Runtime session, BGR 0..255 top-left letterboxing, raw YOLOX decoding, class-aware NMS, and labelled rendering. It accepts only the audited static `[1,3,416,416]` to `[1,3549,85]` float32 contract. No parity or benchmark claim is made.
 
 Run all Phase 0 checks:
 

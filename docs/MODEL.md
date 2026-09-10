@@ -75,6 +75,10 @@ Custom `--labels` files must be UTF-8 with exactly 80 nonempty unique lines in t
 
 ## Acquisition and checks
 
+### C++ runtime archive
+
+Phase 5 uses the official CPU-only Linux x86-64 ONNX Runtime **1.24.4** archive: `https://github.com/microsoft/onnxruntime/releases/download/v1.24.4/onnxruntime-linux-x64-1.24.4.tgz`. The audited archive is **8,155,822 bytes** with SHA-256 **`3a211fbea252c1e66290658f1b735b772056149f28321e71c308942cdb54b747`**. `scripts/setup_cpp.sh` downloads it atomically into ignored `third_party/onnxruntime/`, verifies it before publication, and validates `include/onnxruntime_cxx_api.h` plus `lib/libonnxruntime.so`.
+
 ```bash
 python/.venv/bin/python scripts/download_or_export_model.py
 python/.venv/bin/python scripts/download_or_export_model.py --verify-only

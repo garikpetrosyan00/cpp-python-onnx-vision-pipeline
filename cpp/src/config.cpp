@@ -7,6 +7,7 @@
 #include <set>
 #include <sstream>
 #include <string_view>
+#include <fstream>
 
 namespace vision {
 namespace {
@@ -66,6 +67,16 @@ void validate_output(const Config& config) {
       throw ConfigError("Cannot compare output and source: " + error.message());
     }
   }
+}
+
+std::vector<std::string> load_labels(const std::filesystem::path& path) {
+  std::ifstream stream(path);
+  if (!stream) throw ConfigError("Cannot read --labels file " + path.string() + ". Check path and permissions.");
+  std::vector<std::string> labels; std::string line;
+  while (std::getline(stream,line)) { while(!line.empty() && (line.back()=='\r'||line.back()==' '||line.back()=='\t')) line.pop_back(); if(line.empty()) throw ConfigError("Labels must contain exactly 80 nonempty unique names in COCO order."); labels.push_back(line); }
+  std::set<std::string> unique(labels.begin(),labels.end());
+  if(labels.size()!=80 || unique.size()!=80) throw ConfigError("Labels " + path.string() + " must contain exactly 80 nonempty unique names in COCO order.");
+  return labels;
 }
 
 }  // namespace
@@ -154,6 +165,8 @@ CliOptions parse_cli(int argc, char* argv[]) {
   }
   std::optional<std::string> source;
   std::optional<std::filesystem::path> output;
+  std::optional<std::filesystem::path> model;
+  std::optional<std::filesystem::path> labels;
   bool no_display = false;
   std::optional<std::size_t> max_frames;
   double confidence = 0.25;
@@ -163,35 +176,45 @@ CliOptions parse_cli(int argc, char* argv[]) {
     if (argument == "--help" || argument == "-h") return {CliAction::help, std::nullopt};
     if (argument == "--version") return {CliAction::version, std::nullopt};
     if (argument == "--source") source = option_value(index, argc, argv, argument);
+    else if (argument == "--model") model = option_value(index, argc, argv, argument);
+    else if (argument == "--labels") labels = option_value(index, argc, argv, argument);
     else if (argument == "--output") output = option_value(index, argc, argv, argument);
     else if (argument == "--max-frames") max_frames = parse_positive_integer(option_value(index, argc, argv, argument), argument);
     else if (argument == "--confidence") confidence = parse_unit_interval(option_value(index, argc, argv, argument), argument);
     else if (argument == "--iou") iou = parse_unit_interval(option_value(index, argc, argv, argument), argument);
     else if (argument == "--no-display") no_display = true;
-    else if (argument == "--model" || argument == "--labels" || argument == "--benchmark" ||
-             argument == "--warmup" || argument == "--benchmark-output") {
+    else if (argument == "--benchmark" || argument == "--warmup" || argument == "--benchmark-output") {
       throw ConfigError(argument + " is unavailable: ONNX inference and benchmarking begin in Phase 5/7.");
     } else {
       throw ConfigError("Unknown option: " + argument + ". Run --help for supported Phase 4 options.");
     }
   }
   if (!source) return {CliAction::help, std::nullopt};
-  Config config{parse_source(*source), output, no_display, max_frames, confidence, iou};
+  if (!model && labels) throw ConfigError("--labels requires --model; omit both for media passthrough.");
+  if (model) {
+    std::error_code error;
+    if (!std::filesystem::is_regular_file(*model,error) || error) throw ConfigError("--model file is missing or not a regular file: " + model->string());
+    if (!labels) labels = std::filesystem::path("models/classes.txt");
+  }
+  Config config{parse_source(*source), output, no_display, max_frames, confidence, iou, model, labels, {}};
+  if (config.labels) config.label_names=load_labels(*config.labels);
   validate_output(config);
   return {CliAction::run, config};
 }
 
 std::string help_text() {
   return "vision_cpp 0.1.0\n"
-         "C++ media pipeline (Phase 4 passthrough; no AI inference)\n\n"
+         "C++ media pipeline (Phase 5; optional CPU YOLOX-Nano detection)\n\n"
          "Usage:\n  vision_cpp --source SOURCE [options]\n\n"
          "Options:\n"
          "  --source SOURCE       Camera index, image, or video file\n"
+         "  --model PATH          Audited YOLOX-Nano ONNX model (CPU only)\n"
+         "  --labels PATH         80 COCO labels (defaults to models/classes.txt)\n"
          "  --output PATH         Save unchanged image/video frames\n"
          "  --no-display          Run without GUI windows\n"
          "  --max-frames N        Stop after a positive number of frames\n"
-         "  --confidence VALUE    Validate finite [0,1]; unused until Phase 5\n"
-         "  --iou VALUE           Validate finite [0,1]; unused until Phase 5\n"
+         "  --confidence VALUE    Minimum objectness × class score in [0,1]\n"
+         "  --iou VALUE           Class-aware NMS IoU threshold in [0,1]\n"
          "  --help, -h            Show this help\n"
          "  --version             Show version\n\n"
          "Press Q or ESC to exit interactive mode. Use --no-display on headless Linux.\n";
