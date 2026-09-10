@@ -26,6 +26,7 @@ struct Config {
   std::optional<std::filesystem::path> model;
   std::optional<std::filesystem::path> labels;
   std::vector<std::string> label_names;
+  std::optional<std::filesystem::path> detections_json;
 };
 
 enum class CliAction { run, help, version };

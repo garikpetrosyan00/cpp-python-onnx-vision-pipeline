@@ -25,6 +25,7 @@ add_library(vision_core
   src/preprocessor.cpp
   src/postprocessor.cpp
   src/inference_engine.cpp
+  src/detections_json.cpp
 )
 target_include_directories(vision_core PUBLIC include "${ONNXRUNTIME_INCLUDE_DIR}")
 target_link_libraries(vision_core PUBLIC ${OpenCV_LIBS} "${ONNXRUNTIME_LIBRARY}")
@@ -49,6 +50,7 @@ if(BUILD_TESTING)
     tests/test_input_source.cpp
     tests/test_pipeline.cpp
     tests/test_detector.cpp
+    tests/test_detections_json.cpp
   )
   target_link_libraries(vision_cpp_tests PRIVATE vision_core)
   if(MSVC)

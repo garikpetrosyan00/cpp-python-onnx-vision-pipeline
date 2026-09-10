@@ -36,6 +36,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--benchmark-output", help="JSON result path; CSV is written beside it")
     parser.add_argument(
+        "--detections-json",
+        help="Write canonical detections JSON (requires --model and image source)",
+    )
+    parser.add_argument(
         "--confidence", default="0.25", help="Minimum objectness × class score in [0, 1]"
     )
     parser.add_argument("--iou", default="0.45", help="Class-aware NMS IoU threshold in [0, 1]")
@@ -71,6 +75,9 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 if args.benchmark_output is not None
                 else None
             ),
+            detections_json=Path(args.detections_json).expanduser()
+            if args.detections_json
+            else None,
         )
         if args.output == "":
             raise ValueError("--output must be a non-empty image or video path.")
@@ -78,6 +85,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
         parser.error(str(exc))
 
     # Keep package import, help, and version usable without runtime dependencies.
+    from vision_pipeline.detections_json import DetectionJsonError
     from vision_pipeline.input_source import MediaError
     from vision_pipeline.metrics import BenchmarkError
     from vision_pipeline.pipeline import run_pipeline
@@ -87,7 +95,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("Interrupted; media resources released.", file=sys.stderr)
         return 130
-    except (MediaError, DetectorError, BenchmarkError) as exc:
+    except (MediaError, DetectorError, BenchmarkError, DetectionJsonError) as exc:
         print(f"{parser.prog}: error: {exc}", file=sys.stderr)
         return 1
     return 0

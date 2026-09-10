@@ -273,6 +273,8 @@ Acceptance: ONNX objects and buffers have clear RAII ownership; one session is r
 
 Goal: prove Python and C++ produce equivalent canonical detections.
 
+Status: complete for the audited CPU model and tracked 416x416 fixture. The real Python/C++ run produced 32 ordered detections within the documented `1e-5` absolute tolerance. Benchmarking remains Phase 7 work.
+
 Files: JSON detection export in both CLIs, `scripts/check_parity.py`, fixed legal test image, and parity documentation/tests.
 
 Verification:

@@ -2,7 +2,7 @@
 
 Equivalent object-detection pipelines in modern C++ and Python using OpenCV and ONNX Runtime on Ubuntu Linux. The finished project will make preprocessing, inference, postprocessing, rendering, and benchmarking directly comparable across both implementations.
 
-> Status: Phase 5 adds a CPU-only C++ YOLOX-Nano detector while retaining C++ passthrough mode when `--model` is omitted. C++ metrics, benchmarking, and cross-language parity have not started.
+> Status: Phase 6 adds canonical detection JSON export and verifies Python/C++ CPU parity on a fixed generated fixture. Benchmarking has not started.
 
 ## Planned Stack
 
@@ -63,7 +63,7 @@ cmake --build build -j
   --source path/to/image.png --output outputs/detected.png --no-display
 ```
 
-The C++ detector uses one CPU ONNX Runtime session, BGR 0..255 top-left letterboxing, raw YOLOX decoding, class-aware NMS, and labelled rendering. It accepts only the audited static `[1,3,416,416]` to `[1,3549,85]` float32 contract. No parity or benchmark claim is made.
+The C++ detector uses one CPU ONNX Runtime session, BGR 0..255 top-left letterboxing, raw YOLOX decoding, class-aware NMS, and labelled rendering. It accepts only the audited static `[1,3,416,416]` to `[1,3549,85]` float32 contract. Phase 6 parity commands and limits are documented in [docs/PARITY.md](docs/PARITY.md); no benchmark claim is made.
 
 Run all Phase 0 checks:
 

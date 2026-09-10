@@ -152,6 +152,21 @@ def test_labels_require_model(tmp_path: Path) -> None:
         PipelineConfig(parse_source("0"), labels=tmp_path / "labels.txt")
 
 
+def test_detections_json_validation(model_path: Path, image_path: Path, tmp_path: Path) -> None:
+    source = parse_source(str(image_path))
+    destination = tmp_path / "detections.json"
+    assert (
+        PipelineConfig(source, model=model_path, detections_json=destination).detections_json
+        == destination
+    )
+    with pytest.raises(ValueError, match="requires --model"):
+        PipelineConfig(source, detections_json=destination)
+    with pytest.raises(ValueError, match="must be a .json"):
+        PipelineConfig(source, model=model_path, detections_json=tmp_path / "detections.txt")
+    with pytest.raises(ValueError, match="requires one image"):
+        PipelineConfig(parse_source("0"), model=model_path, detections_json=destination)
+
+
 @pytest.mark.parametrize("option", ["model", "labels"])
 def test_missing_detector_paths(model_path: Path, tmp_path: Path, option: str) -> None:
     options = {"model": model_path, option: tmp_path / "missing"}

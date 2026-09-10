@@ -21,6 +21,18 @@ void run_detector_tests() {
   std::vector<float> output(count,0.F); for(int row=0;row<vision::kOutputRows;++row) output[static_cast<std::size_t>(row)*vision::kOutputColumns+4]=1.F;
   output[4]=1.F; output[5]=.5F; output[6]=.5F;
   auto boxes=vision::decode_boxes(output); check(std::abs(boxes[0]+4.F)<.001F && std::abs(boxes[2]-4.F)<.001F,"Stride-eight decode failed.");
+  check(vision::numpy_exp_float(2.4753880500793457F) == 11.886317253112793F,
+        "NumPy-compatible float32 exponential regression failed.");
+  output[static_cast<std::size_t>(3494) * vision::kOutputColumns + 0] = -0.8846415281295776F;
+  output[static_cast<std::size_t>(3494) * vision::kOutputColumns + 1] = -0.8112688064575195F;
+  output[static_cast<std::size_t>(3494) * vision::kOutputColumns + 2] = 2.050257921218872F;
+  output[static_cast<std::size_t>(3494) * vision::kOutputColumns + 3] = 2.4753880500793457F;
+  boxes = vision::decode_boxes(output);
+  check(boxes[3494 * 4 + 0] == 167.37298583984375F &&
+            boxes[3494 * 4 + 1] == 39.85832214355469F &&
+            boxes[3494 * 4 + 2] == 416.00994873046875F &&
+            boxes[3494 * 4 + 3] == 420.220458984375F,
+        "Problematic anchor no longer matches Python float32 corners.");
   std::vector<float> nms_boxes{0,0,10,10,0,0,10,10}; std::vector<float> scores{.5F,.5F}; auto kept=vision::nms(nms_boxes,scores,.45F); check(kept.size()==1&&kept[0]==0,"Stable NMS tie ordering failed.");
   std::vector<std::string> labels(80); for(int i=0;i<80;++i)labels[i]="class"+std::to_string(i);
   auto results=vision::postprocess(output,prepared.metadata,labels,.5,.45); check(!results.empty()&&results.front().class_id==0,"Inclusive confidence filtering failed.");

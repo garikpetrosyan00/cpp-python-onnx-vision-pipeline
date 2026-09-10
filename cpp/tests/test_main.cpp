@@ -6,6 +6,7 @@ void run_config_tests();
 void run_input_source_tests();
 void run_pipeline_tests();
 void run_detector_tests();
+void run_detections_json_tests();
 int run_real_model_smoke(const std::string& model, const std::string& labels);
 
 int main(int argc, char* argv[]) {
@@ -15,6 +16,7 @@ int main(int argc, char* argv[]) {
     run_input_source_tests();
     run_pipeline_tests();
     run_detector_tests();
+    run_detections_json_tests();
     std::cout << "All vision_cpp tests passed.\n";
     return 0;
   } catch (const std::exception& error) {

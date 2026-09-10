@@ -40,6 +40,7 @@ vision::Config passthrough_config(vision::SourceSpec source, std::optional<std::
   config.model = std::nullopt;
   config.labels = std::nullopt;
   config.label_names = {};
+  config.detections_json = std::nullopt;
   return config;
 }
 

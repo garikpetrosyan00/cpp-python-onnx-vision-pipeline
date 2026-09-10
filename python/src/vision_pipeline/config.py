@@ -133,6 +133,7 @@ class PipelineConfig:
     benchmark: bool = False
     warmup: int = 5
     benchmark_output: Path | None = None
+    detections_json: Path | None = None
     label_names: tuple[str, ...] = field(init=False, default=(), repr=False)
 
     def __post_init__(self) -> None:
@@ -161,6 +162,13 @@ class PipelineConfig:
             object.__setattr__(self, "label_names", load_labels(self.labels))
         elif self.labels is not None:
             raise ValueError("--labels requires --model; omit both for media passthrough.")
+        if self.detections_json is not None:
+            if self.model is None:
+                raise ValueError("--detections-json requires --model.")
+            if self.source.kind is not SourceKind.IMAGE:
+                raise ValueError("--detections-json currently requires one image source.")
+            if self.detections_json.suffix.lower() != ".json":
+                raise ValueError("--detections-json must be a .json path.")
         if self.output is not None:
             self._validate_output()
 

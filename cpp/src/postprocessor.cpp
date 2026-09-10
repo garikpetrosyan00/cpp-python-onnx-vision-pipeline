@@ -4,6 +4,9 @@
 #include <cmath>
 #include <numeric>
 #include <stdexcept>
+#include <limits>
+#include <cstdint>
+#include <cstring>
 
 namespace vision {
 namespace { constexpr std::size_t kValues=static_cast<std::size_t>(kOutputRows)*kOutputColumns; }
@@ -11,10 +14,21 @@ void validate_output(const std::vector<float>& output) {
   if(output.size()!=kValues) throw DetectorError("Unexpected model output element count "+std::to_string(output.size())+"; expected [1,3549,85] float32.");
   for(std::size_t i=0;i<output.size();++i) { if(!std::isfinite(output[i])) throw DetectorError("Model output contains NaN or infinite values."); if(i%kOutputColumns>=4 && (output[i]<0 || output[i]>1)) throw DetectorError("Model objectness/class probabilities must be in [0,1]; no logits expected."); }
 }
+float numpy_exp_float(float value) {
+  if (value >= 88.72283935546875F) return std::numeric_limits<float>::infinity();
+  if (value <= -103.97208404541015625F) return 0.0F;
+  constexpr float magic=0x1.800000p+23F,log2e=1.442695040888963407359924681001892137F;
+  volatile float rounded=value*log2e+magic; const float quadrant=rounded-magic;
+  float x=std::fma(quadrant,-6.93145752e-1F,value); x=std::fma(quadrant,-1.42860677e-6F,x);
+  float numerator=std::fma(5.082762527590693718096e-4F,x,6.757896990527504603057e-3F);
+  numerator=std::fma(numerator,x,5.114512081637298353406e-2F); numerator=std::fma(numerator,x,2.473615434895520810817e-1F); numerator=std::fma(numerator,x,7.257664613233124478488e-1F); numerator=std::fma(numerator,x,1.0F);
+  float denominator=std::fma(2.159509375685829852307e-2F,x,-2.742335390411667452936e-1F); denominator=std::fma(denominator,x,1.0F); float polynomial=numerator/denominator;
+  std::uint32_t bits; std::memcpy(&bits,&polynomial,sizeof(bits)); const auto exponent_offset=static_cast<std::int64_t>(quadrant)*(std::int64_t{1}<<23); bits+=static_cast<std::uint32_t>(exponent_offset); std::memcpy(&polynomial,&bits,sizeof(bits)); return polynomial;
+}
 std::vector<float> decode_boxes(const std::vector<float>& output) {
   validate_output(output); std::vector<float> boxes(static_cast<std::size_t>(kOutputRows)*4); int row=0;
   for(int stride: {8,16,32}) for(int y=0;y<kModelHeight/stride;++y) for(int x=0;x<kModelWidth/stride;++x,++row) {
-    const float* raw=&output[static_cast<std::size_t>(row)*kOutputColumns]; float cx=(raw[0]+x)*stride, cy=(raw[1]+y)*stride, w=std::exp(raw[2])*stride,h=std::exp(raw[3])*stride;
+    const float* raw=&output[static_cast<std::size_t>(row)*kOutputColumns]; const double cx64=(static_cast<double>(raw[0])+x)*stride, cy64=(static_cast<double>(raw[1])+y)*stride; const float exp_w=numpy_exp_float(raw[2]),exp_h=numpy_exp_float(raw[3]); const double w64=static_cast<double>(exp_w)*stride,h64=static_cast<double>(exp_h)*stride; const float cx=static_cast<float>(cx64),cy=static_cast<float>(cy64),w=static_cast<float>(w64),h=static_cast<float>(h64);
     if(!std::isfinite(w)||!std::isfinite(h)) throw DetectorError("YOLOX box decoding overflowed; check the model/output contract.");
     float* box=&boxes[static_cast<std::size_t>(row)*4]; box[0]=cx-w/2; box[1]=cy-h/2; box[2]=cx+w/2; box[3]=cy+h/2;
   } return boxes;

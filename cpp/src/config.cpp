@@ -167,6 +167,7 @@ CliOptions parse_cli(int argc, char* argv[]) {
   std::optional<std::filesystem::path> output;
   std::optional<std::filesystem::path> model;
   std::optional<std::filesystem::path> labels;
+  std::optional<std::filesystem::path> detections_json;
   bool no_display = false;
   std::optional<std::size_t> max_frames;
   double confidence = 0.25;
@@ -178,6 +179,7 @@ CliOptions parse_cli(int argc, char* argv[]) {
     if (argument == "--source") source = option_value(index, argc, argv, argument);
     else if (argument == "--model") model = option_value(index, argc, argv, argument);
     else if (argument == "--labels") labels = option_value(index, argc, argv, argument);
+    else if (argument == "--detections-json") detections_json = option_value(index, argc, argv, argument);
     else if (argument == "--output") output = option_value(index, argc, argv, argument);
     else if (argument == "--max-frames") max_frames = parse_positive_integer(option_value(index, argc, argv, argument), argument);
     else if (argument == "--confidence") confidence = parse_unit_interval(option_value(index, argc, argv, argument), argument);
@@ -191,12 +193,15 @@ CliOptions parse_cli(int argc, char* argv[]) {
   }
   if (!source) return {CliAction::help, std::nullopt};
   if (!model && labels) throw ConfigError("--labels requires --model; omit both for media passthrough.");
+  if (detections_json && !model) throw ConfigError("--detections-json requires --model.");
+  if (detections_json && detections_json->extension() != ".json") throw ConfigError("--detections-json must be a .json path.");
   if (model) {
     std::error_code error;
     if (!std::filesystem::is_regular_file(*model,error) || error) throw ConfigError("--model file is missing or not a regular file: " + model->string());
     if (!labels) labels = std::filesystem::path("models/classes.txt");
   }
-  Config config{parse_source(*source), output, no_display, max_frames, confidence, iou, model, labels, {}};
+  Config config{parse_source(*source), output, no_display, max_frames, confidence, iou, model, labels, {}, detections_json};
+  if (config.detections_json && config.source.kind != SourceKind::image) throw ConfigError("--detections-json currently requires an image source for one canonical document.");
   if (config.labels) config.label_names=load_labels(*config.labels);
   validate_output(config);
   return {CliAction::run, config};
@@ -210,6 +215,7 @@ std::string help_text() {
          "  --source SOURCE       Camera index, image, or video file\n"
          "  --model PATH          Audited YOLOX-Nano ONNX model (CPU only)\n"
          "  --labels PATH         80 COCO labels (defaults to models/classes.txt)\n"
+         "  --detections-json P   Write canonical detections JSON (model image only)\n"
          "  --output PATH         Save unchanged image/video frames\n"
          "  --no-display          Run without GUI windows\n"
          "  --max-frames N        Stop after a positive number of frames\n"

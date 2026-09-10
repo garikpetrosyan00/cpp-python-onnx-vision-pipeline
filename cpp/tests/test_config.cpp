@@ -25,6 +25,13 @@ void run_config_tests() {
   std::ofstream(image) << "fixture";
   const auto video = directory.path() / "fixture.avi";
   std::ofstream(video) << "fixture";
+  const auto model = directory.path() / "model.onnx";
+  std::ofstream(model) << "fixture";
+  const auto labels = directory.path() / "labels.txt";
+  {
+    std::ofstream label_stream(labels);
+    for (int index = 0; index < 80; ++index) label_stream << "class" << index << '\n';
+  }
 
   const auto camera = vision::parse_source("12");
   check(camera.kind == vision::SourceKind::camera && camera.camera_index == 12, "Camera parsing failed.");
@@ -49,4 +56,10 @@ void run_config_tests() {
                "Unsupported output extension");
   expect_throw([&] { parse({"vision_cpp", "--source", image.string(), "--output", image.string()}); },
                "Output must differ");
+  expect_throw([&] { parse({"vision_cpp", "--source", image.string(), "--detections-json", "result.json"}); },
+               "requires --model");
+  expect_throw([&] { parse({"vision_cpp", "--source", image.string(), "--model", model.string(), "--labels", labels.string(), "--detections-json", "result.txt"}); },
+               "must be a .json");
+  expect_throw([&] { parse({"vision_cpp", "--source", video.string(), "--model", model.string(), "--labels", labels.string(), "--detections-json", "result.json"}); },
+               "requires an image source");
 }

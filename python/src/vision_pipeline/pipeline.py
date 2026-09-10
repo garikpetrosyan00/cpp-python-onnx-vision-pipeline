@@ -5,6 +5,8 @@ from pathlib import Path
 from time import perf_counter_ns
 
 from vision_pipeline.config import PipelineConfig
+from vision_pipeline.detections_json import document as detections_document
+from vision_pipeline.detections_json import write_atomic
 from vision_pipeline.input_source import InputSource
 from vision_pipeline.metrics import (
     BenchmarkError,
@@ -26,6 +28,8 @@ def _default_benchmark_output() -> Path:
 def run_pipeline(config: PipelineConfig) -> int:
     """Validate the detector before acquisition; own all resources until exit."""
     frames = 0
+    canonical_detections = []
+    canonical_size: tuple[int, int] | None = None
     with ExitStack() as resources:
         detector = None
         if config.model is not None:
@@ -57,6 +61,9 @@ def run_pipeline(config: PipelineConfig) -> int:
                     output, prepared.metadata, config.label_names, config.confidence, config.iou
                 )
                 postprocess_ns = perf_counter_ns() - started
+                if config.detections_json is not None:
+                    canonical_detections = detections
+                    canonical_size = frame.shape[:2]
             started = perf_counter_ns()
             renderer.render_processing(frame, detections)
             render_ns = perf_counter_ns() - started
@@ -90,4 +97,12 @@ def run_pipeline(config: PipelineConfig) -> int:
                 config, collector, warmup_completed, config.warmup, config.max_frames
             )
             write_benchmark_results(destination, document)
+        if config.detections_json is not None:
+            assert canonical_size is not None
+            write_atomic(
+                config.detections_json,
+                detections_document(
+                    canonical_detections, canonical_size, config.confidence, config.iou
+                ),
+            )
     return frames
